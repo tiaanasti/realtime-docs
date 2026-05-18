@@ -33,7 +33,7 @@ Cara Menjalankan Project
 1. Clone Project
 git clone <repository-url>
 2. Masuk ke Folder Project
-cd collaborative-editor
+cd realtime-docs
 3. Install Dependency Laravel
 composer install
 4. Install Dependency Frontend

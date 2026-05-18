@@ -1,4 +1,3 @@
-```blade
 <x-app-layout>
 
 <div class="min-h-screen bg-gray-100 py-10">
@@ -578,4 +577,3 @@ title.addEventListener('input', () => {
 </script>
 
 </x-app-layout>
-```

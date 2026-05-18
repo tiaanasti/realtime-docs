@@ -3,55 +3,30 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentController;
 
-/*
-|--------------------------------------------------------------------------
-| HOME
-|--------------------------------------------------------------------------
-*/
-
+// Home route redirects to login
 Route::get('/', function () {
 
     return redirect('/login');
 
 });
 
-/*
-|--------------------------------------------------------------------------
-| AUTHENTICATED ROUTES
-|--------------------------------------------------------------------------
-*/
-
+// Authenticated routes
 Route::middleware(['auth'])->group(function () {
 
-    /*
-    |--------------------------------------------------------------------------
-    | DASHBOARD
-    |--------------------------------------------------------------------------
-    */
-
+//    Dashboard route redirects to documents index
     Route::get('/dashboard', function () {
 
         return redirect('/documents');
 
     })->name('dashboard');
 
-    /*
-    |--------------------------------------------------------------------------
-    | DOCUMENT RESOURCE ROUTES
-    |--------------------------------------------------------------------------
-    */
-
+    // Document resource routes
     Route::resource(
         'documents',
         DocumentController::class
     );
 
-    /*
-    |--------------------------------------------------------------------------
-    | RESTORE DOCUMENT VERSION
-    |--------------------------------------------------------------------------
-    */
-
+//    Restore document version route
     Route::post(
 
         '/documents/{document}/restore/{version}',
@@ -61,11 +36,5 @@ Route::middleware(['auth'])->group(function () {
     )->name('documents.restore');
 
 });
-
-/*
-|--------------------------------------------------------------------------
-| AUTH ROUTES
-|--------------------------------------------------------------------------
-*/
 
 require __DIR__ . '/auth.php';

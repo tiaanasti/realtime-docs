@@ -55,7 +55,9 @@ php artisan migrate
 php artisan reverb:start
 10. Jalankan Vite
 npm run dev
-11. Jalankan Server Laravel
+11. Jalankan Laravel Queue Worker
+php artisan queue:work
+12. Jalankan Server Laravel
 php artisan serve
-12. Buka Project di Browser
+13. Buka Project di Browser
 http://127.0.0.1:8000

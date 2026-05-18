@@ -60,6 +60,3 @@ npm run dev
 php artisan serve
 12. Buka Project di Browser
 http://127.0.0.1:8000
-=======
-# realtime-docs
->>>>>>> afa39a26144d4baf5bd9636638459c957c777abc

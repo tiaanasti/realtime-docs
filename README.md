@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 Realtime Collaborative Document Editor
 
 Deskripsi:

@@ -3,19 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
 use App\Models\Document;
 use App\Models\DocumentVersion;
-
 use App\Events\DocumentUpdated;
 
 class DocumentController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | DOCUMENT LIST
-    |--------------------------------------------------------------------------
-    */
+//    Document list
 
     public function index()
     {
@@ -28,11 +22,7 @@ class DocumentController extends Controller
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | CREATE PAGE
-    |--------------------------------------------------------------------------
-    */
+    //    Create document
 
     public function create()
     {
@@ -41,11 +31,7 @@ class DocumentController extends Controller
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | STORE NEW DOCUMENT
-    |--------------------------------------------------------------------------
-    */
+    //   Store document
 
     public function store(Request $request)
     {
@@ -67,12 +53,7 @@ class DocumentController extends Controller
                 auth()->id()
 
         ]);
-
-        /*
-        |--------------------------------------------------------------------------
-        | CREATE INITIAL VERSION
-        |--------------------------------------------------------------------------
-        */
+// Store document version
 
         DocumentVersion::create([
 
@@ -95,11 +76,7 @@ class DocumentController extends Controller
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | SHOW DOCUMENT
-    |--------------------------------------------------------------------------
-    */
+    // Show document
 
     public function show(Document $document)
     {
@@ -109,11 +86,7 @@ class DocumentController extends Controller
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | EDIT DOCUMENT
-    |--------------------------------------------------------------------------
-    */
+//   Edit document
 
     public function edit(Document $document)
     {
@@ -123,22 +96,14 @@ class DocumentController extends Controller
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | UPDATE DOCUMENT
-    |--------------------------------------------------------------------------
-    */
+//   Update document
 
     public function update(
         Request $request,
         Document $document
     )
     {
-        /*
-        |--------------------------------------------------------------------------
-        | VALIDATION
-        |--------------------------------------------------------------------------
-        */
+        // Validation
 
         $request->validate([
 
@@ -150,11 +115,7 @@ class DocumentController extends Controller
 
         ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | NEW DATA
-        |--------------------------------------------------------------------------
-        */
+        // New data
 
         $newTitle =
             $request->title ?? '';
@@ -162,11 +123,7 @@ class DocumentController extends Controller
         $newContent =
             $request->content ?? '';
 
-        /*
-        |--------------------------------------------------------------------------
-        | DETECT CHANGES
-        |--------------------------------------------------------------------------
-        */
+    //    Detect Chnages
 
         $contentChanged =
             trim($document->content)
@@ -176,12 +133,7 @@ class DocumentController extends Controller
             trim($document->title)
             !== trim($newTitle);
 
-        /*
-        |--------------------------------------------------------------------------
-        | GET LAST VERSION
-        |--------------------------------------------------------------------------
-        */
-
+    //   Get last version
         $lastVersion =
             DocumentVersion::where(
                 'document_id',
@@ -190,11 +142,7 @@ class DocumentController extends Controller
             ->latest()
             ->first();
 
-        /*
-        |--------------------------------------------------------------------------
-        | VERSION LOGIC
-        |--------------------------------------------------------------------------
-        */
+    //   Veraion logic
 
         $shouldCreateVersion = false;
 
@@ -209,12 +157,7 @@ class DocumentController extends Controller
                     $lastVersion->created_at
                 );
 
-            /*
-            |--------------------------------------------------------------------------
-            | CREATE SNAPSHOT EVERY 5 MINUTES
-            |--------------------------------------------------------------------------
-            */
-
+        //    Create snapshot every 5 minutes if there are changes
             if (
                 $secondsPassed >= 300 &&
                 (
@@ -227,11 +170,7 @@ class DocumentController extends Controller
             }
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | UPDATE DOCUMENT FIRST
-        |--------------------------------------------------------------------------
-        */
+        // Update document
 
         $document->update([
 
@@ -243,19 +182,10 @@ class DocumentController extends Controller
 
         ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | REFRESH MODEL
-        |--------------------------------------------------------------------------
-        */
-
+    //  Refresh model
         $document->refresh();
 
-        /*
-        |--------------------------------------------------------------------------
-        | SAVE UPDATED VERSION
-        |--------------------------------------------------------------------------
-        */
+        // Saved Update version
 
         if (
             $shouldCreateVersion ||
@@ -264,7 +194,6 @@ class DocumentController extends Controller
         )
         {
             DocumentVersion::create([
-
                 'document_id' =>
                     $document->id,
 
@@ -280,11 +209,7 @@ class DocumentController extends Controller
             ]);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | BROADCAST REALTIME
-        |--------------------------------------------------------------------------
-        */
+        // Broadcast realtime
 
         broadcast(
 
@@ -295,12 +220,7 @@ class DocumentController extends Controller
 
         )->toOthers();
 
-        /*
-        |--------------------------------------------------------------------------
-        | RESPONSE
-        |--------------------------------------------------------------------------
-        */
-
+    //   Response
         return response()->json([
 
             'success' => true,
@@ -310,23 +230,14 @@ class DocumentController extends Controller
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | RESTORE VERSION
-    |--------------------------------------------------------------------------
-    */
+//    Restore version
 
     public function restore(
         Document $document,
         DocumentVersion $version
     )
     {
-        /*
-        |--------------------------------------------------------------------------
-        | SAVE CURRENT VERSION
-        |--------------------------------------------------------------------------
-        */
-
+    //    Save current version
         DocumentVersion::create([
 
             'document_id' =>
@@ -343,11 +254,7 @@ class DocumentController extends Controller
 
         ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | RESTORE DATA
-        |--------------------------------------------------------------------------
-        */
+        // Restore data
 
         $document->update([
 
@@ -359,19 +266,9 @@ class DocumentController extends Controller
 
         ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | REFRESH
-        |--------------------------------------------------------------------------
-        */
-
+    //   Refresh model
         $document->refresh();
-
-        /*
-        |--------------------------------------------------------------------------
-        | BROADCAST RESTORE
-        |--------------------------------------------------------------------------
-        */
+// Brpadcast realtime update
 
         broadcast(
 
@@ -382,20 +279,12 @@ class DocumentController extends Controller
 
         )->toOthers();
 
-        /*
-        |--------------------------------------------------------------------------
-        | REDIRECT
-        |--------------------------------------------------------------------------
-        */
+        // Redirect
 
         return back();
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | DELETE DOCUMENT
-    |--------------------------------------------------------------------------
-    */
+// Delete document
 
     public function destroy(Document $document)
     {

@@ -142,6 +142,7 @@
 
 </div>
 
+
 <script type="module">
 
 const title =
@@ -165,6 +166,8 @@ const liveStatus =
 const conflictStatus =
     document.getElementById('conflict-status');
 
+/* ================= VARIABLES ================= */
+
 let users = [];
 
 let autosaveTimeout;
@@ -173,7 +176,8 @@ let liveTimeout;
 
 let conflictTimeout;
 
-let conflictVisible = false;
+// cooldown conflict per user
+const conflictCooldowns = {};
 
 /* ================= USERS ================= */
 
@@ -184,7 +188,16 @@ function renderUsers(activeUsers)
     activeUsers.forEach(user => {
 
         onlineUsers.innerHTML += `
-            <div class="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm">
+            <div
+                class="
+                    px-3
+                    py-1.5
+                    bg-green-100
+                    text-green-700
+                    rounded-full
+                    text-sm
+                "
+            >
                 ${user.name}
             </div>
         `;
@@ -206,14 +219,27 @@ function showLive(message)
 
         liveStatus.classList.add('hidden');
 
-    }, 1500);
+    }, 2000);
 }
 
-function showConflict(message)
+function showConflict(message, userId)
 {
-    if (conflictVisible) return;
+    const now = Date.now();
 
-    conflictVisible = true;
+    // 5 menit
+    const cooldown = 300000;
+
+    // jika notif user ini masih cooldown
+    if (
+        conflictCooldowns[userId]
+        &&
+        now - conflictCooldowns[userId] < cooldown
+    ) {
+        return;
+    }
+
+    // simpan waktu notif terakhir
+    conflictCooldowns[userId] = now;
 
     clearTimeout(conflictTimeout);
 
@@ -225,8 +251,6 @@ function showConflict(message)
 
         conflictStatus.classList.add('hidden');
 
-        conflictVisible = false;
-
     }, 3500);
 }
 
@@ -236,7 +260,8 @@ async function autosave()
 {
     try {
 
-        saveStatus.innerText = 'Syncing...';
+        saveStatus.innerText =
+            'Syncing...';
 
         await fetch(
             '/documents/{{ $document->id }}',
@@ -245,32 +270,42 @@ async function autosave()
 
                 headers: {
 
-                    'Content-Type': 'application/json',
+                    'Content-Type':
+                        'application/json',
 
-                    'Accept': 'application/json',
+                    'Accept':
+                        'application/json',
 
                     'X-CSRF-TOKEN':
                         document
-                            .querySelector('meta[name="csrf-token"]')
-                            .getAttribute('content')
+                            .querySelector(
+                                'meta[name="csrf-token"]'
+                            )
+                            .getAttribute(
+                                'content'
+                            )
                 },
 
                 body: JSON.stringify({
 
-                    title: title.value,
+                    title:
+                        title.value,
 
-                    content: content.value
+                    content:
+                        content.value
 
                 })
             }
         );
 
-        saveStatus.innerText = 'Synced';
+        saveStatus.innerText =
+            'Synced';
 
     }
     catch {
 
-        saveStatus.innerText = 'Error';
+        saveStatus.innerText =
+            'Error';
 
     }
 }
@@ -280,12 +315,18 @@ function triggerAutosave()
     clearTimeout(autosaveTimeout);
 
     autosaveTimeout =
-        setTimeout(autosave, 1500);
+        setTimeout(
+            autosave,
+            1500
+        );
 }
 
 /* ================= CURSOR POSITION ================= */
 
-function getCursorCoordinates(textarea, position)
+function getCursorCoordinates(
+    textarea,
+    position
+)
 {
     const div =
         document.createElement('div');
@@ -293,19 +334,26 @@ function getCursorCoordinates(textarea, position)
     const style =
         window.getComputedStyle(textarea);
 
-    div.style.position = 'absolute';
+    div.style.position =
+        'absolute';
 
-    div.style.visibility = 'hidden';
+    div.style.visibility =
+        'hidden';
 
-    div.style.whiteSpace = 'pre-wrap';
+    div.style.whiteSpace =
+        'pre-wrap';
 
-    div.style.wordWrap = 'break-word';
+    div.style.wordWrap =
+        'break-word';
 
-    div.style.font = style.font;
+    div.style.font =
+        style.font;
 
-    div.style.padding = style.padding;
+    div.style.padding =
+        style.padding;
 
-    div.style.lineHeight = style.lineHeight;
+    div.style.lineHeight =
+        style.lineHeight;
 
     div.style.width =
         textarea.clientWidth + 'px';
@@ -314,7 +362,10 @@ function getCursorCoordinates(textarea, position)
         style.border;
 
     div.textContent =
-        textarea.value.substring(0, position);
+        textarea.value.substring(
+            0,
+            position
+        );
 
     const span =
         document.createElement('span');
@@ -334,7 +385,6 @@ function getCursorCoordinates(textarea, position)
         left:
             span.offsetLeft
             - textarea.scrollLeft
-
     };
 
     document.body.removeChild(div);
@@ -346,8 +396,10 @@ function getCursorCoordinates(textarea, position)
 
 function renderCursor(data)
 {
-    if (data.user_id == {{ auth()->user()->id }})
-    {
+    if (
+        data.user_id ==
+        {{ auth()->user()->id }}
+    ) {
         return;
     }
 
@@ -365,15 +417,34 @@ function renderCursor(data)
             'cursor-' + data.user_id;
 
         cursor.className =
-            'absolute pointer-events-none';
+            'absolute pointer-events-none z-50';
 
         cursor.innerHTML = `
             <div class="flex items-center gap-1">
-                <div class="w-[2px] h-6 bg-red-500 rounded"></div>
 
-                <div class="bg-red-500 text-white text-[10px] px-2 py-[2px] rounded whitespace-nowrap">
+                <div
+                    class="
+                        w-[2px]
+                        h-6
+                        bg-red-500
+                        rounded
+                    "
+                ></div>
+
+                <div
+                    class="
+                        bg-red-500
+                        text-white
+                        text-[10px]
+                        px-2
+                        py-[2px]
+                        rounded
+                        whitespace-nowrap
+                    "
+                >
                     ${data.name}
                 </div>
+
             </div>
         `;
 
@@ -386,17 +457,12 @@ function renderCursor(data)
             data.position
         );
 
-    /*
-    |-----------------------------------
-    | FIX CURSOR POSITION
-    |-----------------------------------
-    */
-
+    // posisi cursor tetap presisi
     cursor.style.top =
-        (coords.top + 12) + 'px';
+        (coords.top + 6) + 'px';
 
     cursor.style.left =
-        (coords.left + 22) + 'px';
+        (coords.left + 6) + 'px';
 }
 
 /* ================= CHANNEL ================= */
@@ -408,6 +474,8 @@ const channel =
 
 channel
 
+    /* ===== USERS ===== */
+
     .here(usersOnline => {
 
         users = usersOnline;
@@ -418,12 +486,19 @@ channel
 
     .joining(user => {
 
-        if (!users.find(u => u.id === user.id))
-        {
+        if (
+            !users.find(
+                u => u.id === user.id
+            )
+        ) {
             users.push(user);
         }
 
         renderUsers(users);
+
+        showLive(
+            `${user.name} joined`
+        );
 
     })
 
@@ -436,128 +511,153 @@ channel
 
         renderUsers(users);
 
-    })
-
-    /* ================= REALTIME ================= */
-
-    .listenForWhisper('typing', e => {
-
-        if (e.user_id == {{ auth()->user()->id }})
-        {
-            return;
-        }
-
-        /*
-        |-----------------------------------
-        | REALTIME SUPER FAST
-        |-----------------------------------
-        */
-
-        title.value =
-            e.title;
-
-        content.value =
-            e.content;
-
-        /*
-        |-----------------------------------
-        | CONFLICT ONLY IF USER TYPING
-        |-----------------------------------
-        */
-
-        if (
-            document.activeElement === content
-            || document.activeElement === title
-        )
-        {
-            showConflict(
-                `${e.name} is editing the document`
-            );
-        }
-
-    })
-
-    .listen('.DocumentUpdated', e => {
-
-        if (e.user_id == {{ auth()->user()->id }})
-        {
-            return;
-        }
-
-        title.value =
-            e.document.title;
-
-        content.value =
-            e.document.content;
-
         showLive(
-            `${e.user_name} synced changes`
+            `${user.name} left`
         );
 
     })
 
-    .listenForWhisper('cursor-move', e => {
+    /* ===== REALTIME EDIT ===== */
 
-        renderCursor(e);
+    .listenForWhisper(
+        'editing',
+        e => {
 
-    });
+            if (
+                e.user_id ==
+                {{ auth()->user()->id }}
+            ) {
+                return;
+            }
+
+            // realtime update tetap jalan
+            title.value =
+                e.title;
+
+            content.value =
+                e.content;
+
+            // conflict notif
+            if (
+                document.activeElement === content
+                ||
+                document.activeElement === title
+            )
+            {
+                showConflict(
+                    `${e.name} is editing the document`,
+                    e.user_id
+                );
+            }
+
+        }
+    )
+
+    /* ===== DOCUMENT UPDATED ===== */
+
+    .listen(
+        '.DocumentUpdated',
+        e => {
+
+            if (
+                e.user_id ==
+                {{ auth()->user()->id }}
+            ) {
+                return;
+            }
+
+            title.value =
+                e.document.title;
+
+            content.value =
+                e.document.content;
+
+            showLive(
+                `${e.user_name} synced changes`
+            );
+
+        }
+    )
+
+    /* ===== CURSOR ===== */
+
+    .listenForWhisper(
+        'cursor-move',
+        e => {
+
+            renderCursor(e);
+
+        }
+    );
 
 /* ================= SEND ================= */
 
 function sendRealtime()
 {
-    channel.whisper('typing', {
+    channel.whisper(
+        'editing',
+        {
 
-        user_id:
-            {{ auth()->user()->id }},
+            user_id:
+                {{ auth()->user()->id }},
 
-        name:
-            "{{ auth()->user()->name }}",
+            name:
+                "{{ auth()->user()->name }}",
 
-        title:
-            title.value,
+            title:
+                title.value,
 
-        content:
-            content.value
+            content:
+                content.value
 
-    });
+        }
+    );
 }
 
 function sendCursor()
 {
-    channel.whisper('cursor-move', {
+    channel.whisper(
+        'cursor-move',
+        {
 
-        user_id:
-            {{ auth()->user()->id }},
+            user_id:
+                {{ auth()->user()->id }},
 
-        name:
-            "{{ auth()->user()->name }}",
+            name:
+                "{{ auth()->user()->name }}",
 
-        position:
-            content.selectionStart
+            position:
+                content.selectionStart
 
-    });
+        }
+    );
 }
 
 /* ================= EVENTS ================= */
 
-content.addEventListener('input', () => {
+content.addEventListener(
+    'input',
+    () => {
 
-    sendRealtime();
+        sendRealtime();
 
-    sendCursor();
+        sendCursor();
 
-    triggerAutosave();
+        triggerAutosave();
 
-});
+    }
+);
 
-title.addEventListener('input', () => {
+title.addEventListener(
+    'input',
+    () => {
 
-    sendRealtime();
+        sendRealtime();
 
-    triggerAutosave();
+        triggerAutosave();
 
-});
+    }
+);
 
 [
     'click',

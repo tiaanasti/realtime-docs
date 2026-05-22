@@ -6,15 +6,16 @@ use Illuminate\Http\Request;
 use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Events\DocumentUpdated;
+use App\Events\DocumentListUpdated;
 
 class DocumentController extends Controller
 {
-//    Document list
-
+// List documents
     public function index()
     {
-        $documents =
-            Document::latest()->get();
+        $documents = Document::with([
+            'versions.user'
+        ])->latest()->get();
 
         return view(
             'documents.index',
@@ -22,8 +23,7 @@ class DocumentController extends Controller
         );
     }
 
-    //    Create document
-
+// Create document page
     public function create()
     {
         return view(
@@ -31,12 +31,10 @@ class DocumentController extends Controller
         );
     }
 
-    //   Store document
-
+    // Store new document
     public function store(Request $request)
     {
         $request->validate([
-
             'title' => 'required'
 
         ]);
@@ -45,39 +43,43 @@ class DocumentController extends Controller
 
             'title' =>
                 $request->title,
-
             'content' =>
                 '',
-
             'user_id' =>
                 auth()->id()
 
         ]);
-// Store document version
 
+// Save initial version
         DocumentVersion::create([
 
             'document_id' =>
                 $document->id,
-
             'user_id' =>
                 auth()->id(),
-
             'title' =>
                 $document->title,
-
             'content' =>
                 $document->content,
 
         ]);
+
+// Realtime document list
+        broadcast(
+
+            new DocumentListUpdated(
+                $document->id,
+                'created'
+            )
+
+        )->toOthers();
 
         return redirect(
             '/documents'
         );
     }
 
-    // Show document
-
+// Show document details
     public function show(Document $document)
     {
         return view(
@@ -86,8 +88,7 @@ class DocumentController extends Controller
         );
     }
 
-//   Edit document
-
+// Edit document page
     public function edit(Document $document)
     {
         return view(
@@ -96,15 +97,15 @@ class DocumentController extends Controller
         );
     }
 
-//   Update document
-
+   
+// Update document
     public function update(
         Request $request,
         Document $document
     )
     {
-        // Validation
 
+    //    Validation
         $request->validate([
 
             'title' =>
@@ -115,16 +116,14 @@ class DocumentController extends Controller
 
         ]);
 
-        // New data
-
+    //   New data
         $newTitle =
-            $request->title ?? '';
+            $request->title ?? $document->title;
 
         $newContent =
-            $request->content ?? '';
+            $request->content ?? $document->content;
 
-    //    Detect Chnages
-
+    //   Detect changes
         $contentChanged =
             trim($document->content)
             !== trim($newContent);
@@ -133,83 +132,49 @@ class DocumentController extends Controller
             trim($document->title)
             !== trim($newTitle);
 
-    //   Get last version
-        $lastVersion =
-            DocumentVersion::where(
-                'document_id',
-                $document->id
-            )
-            ->latest()
-            ->first();
-
-    //   Veraion logic
-
+      
+// Version logic
         $shouldCreateVersion = false;
 
-        if (!$lastVersion)
+        if (
+            $contentChanged ||
+            $titleChanged
+        )
         {
             $shouldCreateVersion = true;
         }
-        else
-        {
-            $secondsPassed =
-                now()->diffInSeconds(
-                    $lastVersion->created_at
-                );
 
-        //    Create snapshot every 5 minutes if there are changes
-            if (
-                $secondsPassed >= 300 &&
-                (
-                    $contentChanged ||
-                    $titleChanged
-                )
-            )
-            {
-                $shouldCreateVersion = true;
-            }
-        }
-
-        // Update document
-
+// Update document
         $document->update([
 
             'title' =>
                 $newTitle,
-
             'content' =>
                 $newContent,
 
         ]);
 
-    //  Refresh model
+// Refresh model
         $document->refresh();
 
-        // Saved Update version
-
-        if (
-            $shouldCreateVersion ||
-            $contentChanged ||
-            $titleChanged
-        )
+// Save version
+        if ($shouldCreateVersion)
         {
             DocumentVersion::create([
+
                 'document_id' =>
                     $document->id,
-
                 'user_id' =>
                     auth()->id(),
-
                 'title' =>
                     $document->title,
-
                 'content' =>
                     $document->content,
 
             ]);
         }
 
-        // Broadcast realtime
+    //    Realtime document editor
 
         broadcast(
 
@@ -220,24 +185,34 @@ class DocumentController extends Controller
 
         )->toOthers();
 
-    //   Response
+        // Realtime document list
+
+        broadcast(
+
+            new DocumentListUpdated(
+                $document->id,
+                'updated'
+            )
+
+        )->toOthers();
+
+    //    Response
         return response()->json([
 
             'success' => true,
-
             'document' => $document
 
         ]);
     }
 
-//    Restore version
-
+  
+// Restore document version
     public function restore(
         Document $document,
         DocumentVersion $version
     )
     {
-    //    Save current version
+        // Save current version
         DocumentVersion::create([
 
             'document_id' =>
@@ -254,8 +229,8 @@ class DocumentController extends Controller
 
         ]);
 
-        // Restore data
-
+       
+// Restore version
         $document->update([
 
             'title' =>
@@ -266,10 +241,11 @@ class DocumentController extends Controller
 
         ]);
 
-    //   Refresh model
+       
+// Refresh model
         $document->refresh();
-// Brpadcast realtime update
 
+    //    Realtime document editor
         broadcast(
 
             new DocumentUpdated(
@@ -279,16 +255,35 @@ class DocumentController extends Controller
 
         )->toOthers();
 
-        // Redirect
+    //    Realtime document list
+        broadcast(
+
+            new DocumentListUpdated(
+                $document->id,
+                'updated'
+            )
+
+        )->toOthers();
 
         return back();
     }
 
 // Delete document
-
     public function destroy(Document $document)
     {
+        $documentId = $document->id;
+
         $document->delete();
+
+    //    Realtime delete
+        broadcast(
+
+            new DocumentListUpdated(
+                $documentId,
+                'deleted'
+            )
+
+        )->toOthers();
 
         return back();
     }

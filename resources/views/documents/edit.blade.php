@@ -92,13 +92,19 @@
                 </div>
 
                 <!-- VERSION -->
-                <div class="border-l bg-gray-50 p-6 h-[760px] overflow-y-auto">
+                <div
+                    id="version-history"
+                    class="border-l bg-gray-50 p-6 h-[760px] overflow-y-auto"
+                >
 
                     <h2 class="text-xl font-bold text-gray-800 mb-5">
                         Version History
                     </h2>
 
-                    <div class="space-y-4">
+                    <div
+                        id="version-container"
+                        class="space-y-4"
+                    >
 
                         @foreach(
                             $document->versions()
@@ -142,51 +148,40 @@
 
 </div>
 
-
 <script type="module">
-
+    
 const title =
     document.getElementById('title');
-
 const content =
     document.getElementById('content');
-
 const saveStatus =
     document.getElementById('save-status');
-
 const onlineUsers =
     document.getElementById('online-users');
-
 const cursorLayer =
     document.getElementById('cursor-layer');
-
 const liveStatus =
     document.getElementById('live-status');
-
 const conflictStatus =
     document.getElementById('conflict-status');
+const versionContainer =
+    document.getElementById('version-container');
 
-/* ================= VARIABLES ================= */
+// Variables
 
 let users = [];
-
 let autosaveTimeout;
-
 let liveTimeout;
-
 let conflictTimeout;
-
-// cooldown conflict per user
+let versionReloadTimeout;
 const conflictCooldowns = {};
 
-/* ================= USERS ================= */
+// User List
 
 function renderUsers(activeUsers)
 {
     onlineUsers.innerHTML = '';
-
     activeUsers.forEach(user => {
-
         onlineUsers.innerHTML += `
             <div
                 class="
@@ -205,18 +200,13 @@ function renderUsers(activeUsers)
     });
 }
 
-/* ================= STATUS ================= */
-
+// Status Messages
 function showLive(message)
 {
     clearTimeout(liveTimeout);
-
     liveStatus.innerText = message;
-
     liveStatus.classList.remove('hidden');
-
     liveTimeout = setTimeout(() => {
-
         liveStatus.classList.add('hidden');
 
     }, 2000);
@@ -225,28 +215,20 @@ function showLive(message)
 function showConflict(message, userId)
 {
     const now = Date.now();
-
-    // 5 menit
     const cooldown = 300000;
-
-    // jika notif user ini masih cooldown
     if (
         conflictCooldowns[userId]
         &&
         now - conflictCooldowns[userId] < cooldown
-    ) {
+    )
+    {
         return;
     }
 
-    // simpan waktu notif terakhir
     conflictCooldowns[userId] = now;
-
     clearTimeout(conflictTimeout);
-
     conflictStatus.innerText = message;
-
     conflictStatus.classList.remove('hidden');
-
     conflictTimeout = setTimeout(() => {
 
         conflictStatus.classList.add('hidden');
@@ -254,7 +236,7 @@ function showConflict(message, userId)
     }, 3500);
 }
 
-/* ================= AUTOSAVE ================= */
+// Autosave
 
 async function autosave()
 {
@@ -267,15 +249,12 @@ async function autosave()
             '/documents/{{ $document->id }}',
             {
                 method: 'PUT',
-
                 headers: {
 
                     'Content-Type':
                         'application/json',
-
                     'Accept':
                         'application/json',
-
                     'X-CSRF-TOKEN':
                         document
                             .querySelector(
@@ -290,7 +269,6 @@ async function autosave()
 
                     title:
                         title.value,
-
                     content:
                         content.value
 
@@ -303,7 +281,6 @@ async function autosave()
 
     }
     catch {
-
         saveStatus.innerText =
             'Error';
 
@@ -317,11 +294,48 @@ function triggerAutosave()
     autosaveTimeout =
         setTimeout(
             autosave,
-            1500
+            800
         );
 }
 
-/* ================= CURSOR POSITION ================= */
+// Version History
+
+function reloadVersionHistory()
+{
+    clearTimeout(versionReloadTimeout);
+
+    versionReloadTimeout = setTimeout(() => {
+
+        fetch(window.location.href)
+            .then(response => response.text())
+            .then(html => {
+
+                const parser =
+                    new DOMParser();
+
+                const doc =
+                    parser.parseFromString(
+                        html,
+                        'text/html'
+                    );
+
+                const newVersion =
+                    doc.getElementById(
+                        'version-container'
+                    );
+
+                if (newVersion)
+                {
+                    versionContainer.innerHTML =
+                        newVersion.innerHTML;
+                }
+
+            });
+
+    }, 500);
+}
+
+// Cursor Position
 
 function getCursorCoordinates(
     textarea,
@@ -330,37 +344,26 @@ function getCursorCoordinates(
 {
     const div =
         document.createElement('div');
-
     const style =
         window.getComputedStyle(textarea);
-
     div.style.position =
         'absolute';
-
     div.style.visibility =
         'hidden';
-
     div.style.whiteSpace =
         'pre-wrap';
-
     div.style.wordWrap =
         'break-word';
-
     div.style.font =
         style.font;
-
     div.style.padding =
         style.padding;
-
     div.style.lineHeight =
         style.lineHeight;
-
     div.style.width =
         textarea.clientWidth + 'px';
-
     div.style.border =
         style.border;
-
     div.textContent =
         textarea.value.substring(
             0,
@@ -369,13 +372,9 @@ function getCursorCoordinates(
 
     const span =
         document.createElement('span');
-
     span.textContent = '|';
-
     div.appendChild(span);
-
     document.body.appendChild(div);
-
     const coords = {
 
         top:
@@ -386,13 +385,11 @@ function getCursorCoordinates(
             span.offsetLeft
             - textarea.scrollLeft
     };
-
     document.body.removeChild(div);
-
     return coords;
 }
 
-/* ================= CURSOR ================= */
+// Cursor
 
 function renderCursor(data)
 {
@@ -412,13 +409,10 @@ function renderCursor(data)
     {
         cursor =
             document.createElement('div');
-
         cursor.id =
             'cursor-' + data.user_id;
-
         cursor.className =
             'absolute pointer-events-none z-50';
-
         cursor.innerHTML = `
             <div class="flex items-center gap-1">
 
@@ -457,7 +451,6 @@ function renderCursor(data)
             data.position
         );
 
-    // posisi cursor tetap presisi
     cursor.style.top =
         (coords.top + 6) + 'px';
 
@@ -465,21 +458,21 @@ function renderCursor(data)
         (coords.left + 6) + 'px';
 }
 
-/* ================= CHANNEL ================= */
+
+// Connect to Echo channel
+// Bersihkan listener lama
+window.Echo.leave(
+    'document.{{ $document->id }}'
+);
 
 const channel =
     window.Echo.join(
         'document.{{ $document->id }}'
     );
-
 channel
 
-    /* ===== USERS ===== */
-
     .here(usersOnline => {
-
         users = usersOnline;
-
         renderUsers(users);
 
     })
@@ -495,7 +488,6 @@ channel
         }
 
         renderUsers(users);
-
         showLive(
             `${user.name} joined`
         );
@@ -510,14 +502,13 @@ channel
             );
 
         renderUsers(users);
-
         showLive(
             `${user.name} left`
         );
 
     })
 
-    /* ===== REALTIME EDIT ===== */
+// Realtime edi
 
     .listenForWhisper(
         'editing',
@@ -529,15 +520,12 @@ channel
             ) {
                 return;
             }
-
-            // realtime update tetap jalan
             title.value =
                 e.title;
 
             content.value =
                 e.content;
 
-            // conflict notif
             if (
                 document.activeElement === content
                 ||
@@ -553,51 +541,81 @@ channel
         }
     )
 
-    /* ===== DOCUMENT UPDATED ===== */
+// Document updated
 
-    .listen(
-        '.DocumentUpdated',
-        e => {
+.listen(
+    '.DocumentUpdated',
+    e => {
 
-            if (
-                e.user_id ==
-                {{ auth()->user()->id }}
-            ) {
-                return;
-            }
+        if (
+            e.user_id ==
+            {{ auth()->user()->id }}
+        ) {
+            return;
+        }
 
+        // Hindari overwrite berulang
+        if (
+            title.value !== e.document.title
+        ) {
             title.value =
                 e.document.title;
-
-            content.value =
-                e.document.content;
-
-            showLive(
-                `${e.user_name} synced changes`
-            );
-
         }
-    )
 
-    /* ===== CURSOR ===== */
+       if (
+    content.value !== e.document.content
+) {
+
+    // Simpan posisi cursor
+    const start =
+        content.selectionStart;
+
+    const end =
+        content.selectionEnd;
+
+    content.value =
+        e.document.content;
+
+    // Restore cursor setelah render selesai
+    setTimeout(() => {
+
+        content.setSelectionRange(
+            start,
+            end
+        );
+
+    }, 0);
+}
+
+        // Reload version history
+        reloadVersionHistory();
+
+        showLive(
+            `${e.user_name} synced changes`
+        );
+
+    }
+)
+// Cursor
 
     .listenForWhisper(
         'cursor-move',
         e => {
 
             renderCursor(e);
-
         }
     );
-
-/* ================= SEND ================= */
+// Send
 
 function sendRealtime()
 {
+    if (!channel) {
+        return;
+    }
+
     channel.whisper(
         'editing',
         {
-
             user_id:
                 {{ auth()->user()->id }},
 
@@ -609,7 +627,6 @@ function sendRealtime()
 
             content:
                 content.value
-
         }
     );
 }
@@ -619,13 +636,10 @@ function sendCursor()
     channel.whisper(
         'cursor-move',
         {
-
             user_id:
                 {{ auth()->user()->id }},
-
             name:
                 "{{ auth()->user()->name }}",
-
             position:
                 content.selectionStart
 
@@ -633,16 +647,12 @@ function sendCursor()
     );
 }
 
-/* ================= EVENTS ================= */
-
+// Event
 content.addEventListener(
     'input',
     () => {
-
         sendRealtime();
-
         sendCursor();
-
         triggerAutosave();
 
     }
@@ -652,8 +662,7 @@ title.addEventListener(
     'input',
     () => {
 
-        sendRealtime();
-
+        sendRealtime()
         triggerAutosave();
 
     }

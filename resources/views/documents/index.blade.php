@@ -8,21 +8,16 @@
         <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-10">
 
             <div>
-
                 <h1 class="text-3xl font-bold text-gray-800">
                     Realtime Documents
                 </h1>
-
                 <p class="text-gray-500 mt-1">
                     Collaborative workspace
                 </p>
-
             </div>
 
-            <a
-                href="/documents/create"
-                class="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition"
-            >
+            <a href="/documents/create"
+               class="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition">
                 + Create
             </a>
 
@@ -47,6 +42,7 @@
 
         <!-- DOCUMENTS -->
         <div
+            id="documents-grid"
             class="grid gap-8 justify-center"
             style="grid-template-columns: repeat(auto-fit, minmax(380px, 380px));"
         >
@@ -54,12 +50,7 @@
             @forelse($documents as $document)
 
                 @php
-
-                    $latestVersion =
-                        $document->versions()
-                            ->latest()
-                            ->first();
-
+                    $latestVersion = $document->versions()->latest()->first();
                 @endphp
 
                 <div class="bg-white rounded-2xl shadow hover:shadow-xl transition p-6 flex flex-col justify-between min-h-[320px]">
@@ -92,11 +83,9 @@
                                 </h3>
 
                                 @if($latestVersion)
-
                                     <span class="text-xs text-gray-400">
                                         {{ $latestVersion->created_at->diffForHumans() }}
                                     </span>
-
                                 @endif
 
                             </div>
@@ -105,11 +94,9 @@
 
                                 <!-- USER -->
                                 <div class="mb-3">
-
                                     <span class="inline-flex items-center px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-medium">
                                         {{ $latestVersion->user->name ?? 'Unknown User' }}
                                     </span>
-
                                 </div>
 
                                 <!-- CONTENT -->
@@ -128,9 +115,7 @@
                             @else
 
                                 <div class="bg-gray-50 border rounded-xl p-4 text-sm text-gray-500">
-
                                     No version history yet
-
                                 </div>
 
                             @endif
@@ -148,27 +133,22 @@
 
                         <div class="flex gap-2">
 
-                            <!-- EDIT BUTTON -->
-                            <a
-                                href="/documents/{{ $document->id }}/edit"
-                                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm transition"
-                            >
+                            <!-- EDIT -->
+                            <a href="/documents/{{ $document->id }}/edit"
+                               class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm transition">
                                 Edit
                             </a>
 
-                            <!-- DELETE BUTTON -->
-                            <form
-                                action="/documents/{{ $document->id }}"
-                                method="POST"
-                                onsubmit="return confirm('Delete this document?')"
-                            >
+                            <!-- DELETE -->
+                            <form action="/documents/{{ $document->id }}"
+                                  method="POST"
+                                  onsubmit="return confirm('Delete this document?')">
+
                                 @csrf
                                 @method('DELETE')
 
-                                <button
-                                    type="submit"
-                                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition"
-                                >
+                                <button type="submit"
+                                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition">
                                     Delete
                                 </button>
 
@@ -201,5 +181,40 @@
     </div>
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    console.log('Dashboard realtime aktif');
+
+    const channel = window.Echo.channel('documents');
+
+    channel.listen('.document.list.updated', async (e) => {
+
+        console.log('Realtime dashboard:', e);
+
+        try {
+
+            const response = await fetch('/documents');
+            const html = await response.text();
+
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            const newGrid = doc.querySelector('#documents-grid');
+            const currentGrid = document.querySelector('#documents-grid');
+
+            if (newGrid && currentGrid) {
+                currentGrid.innerHTML = newGrid.innerHTML;
+            }
+
+        } catch (error) {
+            console.error(error);
+        }
+
+    });
+
+});
+</script>
 
 </x-app-layout>

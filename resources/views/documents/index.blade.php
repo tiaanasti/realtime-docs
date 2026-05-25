@@ -23,22 +23,25 @@
 
         </div>
 
-        <!-- STATS -->
-        <div class="flex justify-center mb-12">
+<!-- STATS -->
+<div class="flex justify-center mb-12">
 
-            <div class="bg-white rounded-2xl shadow p-8 hover:shadow-md transition w-full max-w-sm text-center">
+    <div
+        id="documents-stats"
+        class="bg-white rounded-2xl shadow p-8 hover:shadow-md transition w-full max-w-sm text-center"
+    >
 
-                <p class="text-gray-500 text-sm">
-                    Total Documents
-                </p>
+        <p class="text-gray-500 text-sm">
+            Total Documents
+        </p>
 
-                <h2 class="text-4xl font-bold text-gray-800 mt-2">
-                    {{ $documents->count() }}
-                </h2>
+        <h2 class="text-4xl font-bold text-gray-800 mt-2">
+            {{ $documents->count() }}
+        </h2>
 
-            </div>
+    </div>
 
-        </div>
+</div>
 
         <!-- DOCUMENTS -->
         <div
@@ -50,7 +53,8 @@
             @forelse($documents as $document)
 
                 @php
-                    $latestVersion = $document->versions()->latest()->first();
+                   
+    $latestVersion = $document->versions->first(); 
                 @endphp
 
                 <div class="bg-white rounded-2xl shadow hover:shadow-xl transition p-6 flex flex-col justify-between min-h-[320px]">
@@ -183,38 +187,104 @@
 </div>
 
 <script>
+
 document.addEventListener('DOMContentLoaded', () => {
 
-    console.log('Dashboard realtime aktif');
+    console.log('Realtime dashboard aktif');
 
-    const channel = window.Echo.channel('documents');
-
-    channel.listen('.document.list.updated', async (e) => {
-
-        console.log('Realtime dashboard:', e);
-
+//   Reload dashboard dengan data terbaru
+    async function reloadDashboard()
+    {
         try {
 
-            const response = await fetch('/documents');
-            const html = await response.text();
+            const response = await fetch(
+                '/documents?ts=' + Date.now(),
+                {
+                    cache: 'no-store',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                }
+            );
 
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
+            const html =
+                await response.text();
 
-            const newGrid = doc.querySelector('#documents-grid');
-            const currentGrid = document.querySelector('#documents-grid');
+            const parser =
+                new DOMParser();
 
-            if (newGrid && currentGrid) {
-                currentGrid.innerHTML = newGrid.innerHTML;
+            const doc =
+                parser.parseFromString(
+                    html,
+                    'text/html'
+                );
+// Update dokument grid
+            const newGrid =
+                doc.querySelector(
+                    '#documents-grid'
+                );
+
+            const currentGrid =
+                document.querySelector(
+                    '#documents-grid'
+                );
+
+            if (
+                newGrid &&
+                currentGrid
+            ) {
+                currentGrid.innerHTML =
+                    newGrid.innerHTML;
+            }
+// Update sttats
+            const newStats =
+                doc.querySelector(
+                    '#documents-stats'
+                );
+
+            const currentStats =
+                document.querySelector(
+                    '#documents-stats'
+                );
+
+            if (
+                newStats &&
+                currentStats
+            ) {
+                currentStats.innerHTML =
+                    newStats.innerHTML;
             }
 
-        } catch (error) {
-            console.error(error);
         }
+        catch(error) {
 
-    });
+            console.error(
+                'Realtime dashboard error:',
+                error
+            );
+
+        }
+    }
+
+//    Echo.channel('documents')
+    window.Echo.channel('documents')
+
+        .listen(
+            '.document.list.updated',
+            (e) => {
+
+                console.log(
+                    'Dashboard updated:',
+                    e
+                );
+
+                reloadDashboard();
+
+            }
+        );
 
 });
+
 </script>
 
 </x-app-layout>
